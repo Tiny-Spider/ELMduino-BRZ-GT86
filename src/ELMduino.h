@@ -408,6 +408,7 @@ public:
 	float relativePedalPos();
 	float hybridBatLife();
 	float oilTemp();
+	float oilTempBRZ();
 	float fuelInjectTiming();
 	float fuelRate();
 	uint8_t emissionRqmts();

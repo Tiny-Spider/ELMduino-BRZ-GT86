@@ -173,6 +173,14 @@ bool ELM327::initializeELM(const char &protocol, const byte &dataTimeout)
         Serial.println(F(" did not work"));
     }
 
+    // Set header to 7E0 for oil temperature CAN messages on BRZ / GT86
+    sprintf(command, SET_HEADER, "7E0");
+    sendCommand_Blocking(command);
+    delay(100);
+
+    sendCommand_Blocking("0100");
+    delay(100);
+
     return connected;
 }
 
@@ -2891,4 +2899,34 @@ bool ELM327::isPidSupported(uint8_t pid)
         return ((response >> (32 - pid)) & 0x1);
     }
     return false;
+}
+
+float ELM327::oilTempBRZ()
+{
+    if (nb_query_state == SEND_COMMAND)
+    {
+        sendCommand("2101");
+        nb_query_state = WAITING_RESP;
+    }
+    else if (nb_query_state == WAITING_RESP)
+    {
+        get_response();
+        if (nb_rx_state == ELM_SUCCESS)
+        {
+            nb_query_state = SEND_COMMAND;         // Reset the query state machine for next command
+
+            payload[73 + 2] = '\0';
+            int convertedValue = (int)strtol(&payload[73], 0, 16) - 40;
+
+            // Will be -40 when failing
+            if (convertedValue < -10) {
+                return 0.0;
+            }
+
+            return convertedValue;
+        }
+        else if (nb_rx_state != ELM_GETTING_MSG)
+            nb_query_state = SEND_COMMAND; // Error or timeout, so reset the query state machine for next command
+    }
+    return 0.0;
 }
