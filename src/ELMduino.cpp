@@ -124,6 +124,7 @@ bool ELM327::initializeELM(const char &protocol, const byte &dataTimeout)
                 {
                     timeout_ms = prevTimeout;
                     connected = true;
+                    initalizeBRZ();
                     return connected;
                 }
                 else if (state == ELM_BUFFER_OVERFLOW)
@@ -146,6 +147,7 @@ bool ELM327::initializeELM(const char &protocol, const byte &dataTimeout)
             if (strstr(payload, RESPONSE_OK) != NULL)
             {
                 connected = true;
+                initalizeBRZ();
                 return connected;
             }
         }
@@ -162,9 +164,12 @@ bool ELM327::initializeELM(const char &protocol, const byte &dataTimeout)
     // Set protocol and save
     sprintf(command, SET_PROTOCOL_TO_H_SAVE, protocol);
 
-    if (sendCommand_Blocking(command) == ELM_SUCCESS)
-        if (strstr(payload, RESPONSE_OK) != NULL)
+    if (sendCommand_Blocking(command) == ELM_SUCCESS) {
+        if (strstr(payload, RESPONSE_OK) != NULL) {
             connected = true;
+            initalizeBRZ();
+        }
+    }
 
     if (debugMode)
     {
@@ -173,15 +178,23 @@ bool ELM327::initializeELM(const char &protocol, const byte &dataTimeout)
         Serial.println(F(" did not work"));
     }
 
+    return connected;
+}
+
+void ELM327::initalizeBRZ() {
+    delay(100);
+
+    sendCommand_Blocking("0100");
+    delay(100);
+
     // Set header to 7E0 for oil temperature CAN messages on BRZ / GT86
+    char command[10] = {'\0'};
     sprintf(command, SET_HEADER, "7E0");
     sendCommand_Blocking(command);
     delay(100);
 
     sendCommand_Blocking("0100");
     delay(100);
-
-    return connected;
 }
 
 /*
